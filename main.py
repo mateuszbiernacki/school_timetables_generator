@@ -5,6 +5,7 @@ class LessonInfo:
         self.teacher_id = teacher_id
         self.room_id = room_id
         self.period_id = period_id
+        self.IDs = [self.lesson_name, self.class_id, self.teacher_id, self.room_id]
 
     def __str__(self):
         return '[name: %d, class: %d, teacher: %d, room: %d]' \
@@ -27,6 +28,14 @@ class Lesson:
             self.next = lesson
         else:
             self.next.add_lesson(lesson)
+
+    def get_lesson(self, object_id):
+        if self.next is None:
+            return []
+        elif object_id in self.next.info.IDs:
+            return self.next.info.IDs
+        else:
+            return self.next.get_lesson(object_id)
 
 
 class PeriodUnit:
@@ -55,6 +64,24 @@ class PeriodUnit:
                 return True
         else:
             return False
+
+    def get_lesson(self, object_id):
+        if self.next_lesson is None:
+            return []
+        elif object_id in self.next_lesson.info.IDs:
+            return self.next_lesson.info.IDs
+        else:
+            return self.next_lesson.get_lesson(object_id)
+
+    def __str__(self):
+        lesson = self.next_lesson
+        counter = 1
+        if not self.all_IDs:
+            return '0 lessons'
+        while lesson.next is not None:
+            counter += 1
+            lesson = lesson.next
+        return '%d lessons' % counter
 
 
 class TimeTableInfo:
@@ -128,18 +155,22 @@ class TimeTable:
     def __init__(self, input_data: TimeTableInfo):
         self.info = input_data
         self.time_table_by_period = []
+        self.bad_records = []
         for period in self.info.periods:
             self.time_table_by_period.append(PeriodUnit(period, self.info.rooms.copy()))
 
     def make_correct_timetable(self):
+        import random
+
         list_of_all_possible_lessons = []
         for group_id in self.info.group_to_sub:
             for sub_and_num in self.info.group_to_sub[group_id]:
                 for _ in range(sub_and_num[1]):
                     list_of_all_possible_lessons.append([group_id, sub_and_num[0], sub_and_num[2]])
-
+        random.shuffle(list_of_all_possible_lessons)
         while len(list_of_all_possible_lessons) != 0:
             gro_sub_tea = list_of_all_possible_lessons.pop(0)
+            is_good = False
             for period_iter in range(len(self.info.periods)):
                 if len(self.time_table_by_period[period_iter].free_rooms) == 0:
                     # period_iter += 1
@@ -148,13 +179,97 @@ class TimeTable:
                 g, s, t = gro_sub_tea[0], gro_sub_tea[1], gro_sub_tea[2]
                 correct_adding = self.time_table_by_period[period_iter].add_lesson(Lesson(LessonInfo(s, g, t, r, period_iter + 4001)))
                 if correct_adding:
+                    is_good = True
                     break
                 else:
                     self.time_table_by_period[period_iter].free_rooms.append(r)
                     # period_iter += 1
                     if period_iter > len(self.info.periods):
                         print('problem-01')
+            if not is_good:
+                self.bad_records.append(gro_sub_tea)
         return True
+
+    def get_string_timetable_by_id(self, object_id):
+        monday = []
+        tuesday = []
+        wednesday = []
+        thursday = []
+        friday = []
+        for i in range(len(self.time_table_by_period)):
+            if object_id in self.time_table_by_period[i].all_IDs:
+                if i % 5 == 0:
+                    monday.append(self.time_table_by_period[i].get_lesson(object_id))
+                elif i % 5 == 1:
+                    tuesday.append(self.time_table_by_period[i].get_lesson(object_id))
+                elif i % 5 == 2:
+                    wednesday.append(self.time_table_by_period[i].get_lesson(object_id))
+                elif i % 5 == 3:
+                    thursday.append(self.time_table_by_period[i].get_lesson(object_id))
+                elif i % 5 == 4:
+                    friday.append(self.time_table_by_period[i].get_lesson(object_id))
+            else:
+                if i % 5 == 0:
+                    monday.append([-1, -1, -1, -1])
+                elif i % 5 == 1:
+                    tuesday.append([-1, -1, -1, -1])
+                elif i % 5 == 2:
+                    wednesday.append([-1, -1, -1, -1])
+                elif i % 5 == 3:
+                    thursday.append([-1, -1, -1, -1])
+                elif i % 5 == 4:
+                    friday.append([-1, -1, -1, -1])
+        string_to_return = 'Monday:\n'
+        for lessons in monday:
+            string_to_return += self.info.names[lessons[0]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[1]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[2]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[3]]
+            string_to_return += '\n'
+        string_to_return += 'Tuesday:\n'
+        for lessons in tuesday:
+            string_to_return += self.info.names[lessons[0]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[1]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[2]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[3]]
+            string_to_return += '\n'
+        string_to_return += 'Wednesday:\n'
+        for lessons in wednesday:
+            string_to_return += self.info.names[lessons[0]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[1]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[2]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[3]]
+            string_to_return += '\n'
+        string_to_return += 'Thursday:\n'
+        for lessons in thursday:
+            string_to_return += self.info.names[lessons[0]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[1]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[2]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[3]]
+            string_to_return += '\n'
+        string_to_return += 'Friday:\n'
+        for lessons in friday:
+            string_to_return += self.info.names[lessons[0]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[1]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[2]]
+            string_to_return += ' '
+            string_to_return += self.info.names[lessons[3]]
+            string_to_return += '\n'
+        return string_to_return
 
 
 if __name__ == '__main__':
@@ -164,4 +279,4 @@ if __name__ == '__main__':
     info = TimeTableInfo(json.loads(f.read()))
     time_table = TimeTable(info)
     time_table.make_correct_timetable()
-    print('d')
+    print(time_table.get_string_timetable_by_id(1005))
