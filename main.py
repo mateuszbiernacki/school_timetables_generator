@@ -190,7 +190,7 @@ class TimeTable:
                 self.bad_records.append(gro_sub_tea)
         return True
 
-    def get_string_timetable_by_id(self, object_id):
+    def get_object_timetable(self, object_id):
         monday = []
         tuesday = []
         wednesday = []
@@ -219,6 +219,10 @@ class TimeTable:
                     thursday.append([-1, -1, -1, -1])
                 elif i % 5 == 4:
                     friday.append([-1, -1, -1, -1])
+        return [monday, tuesday, wednesday, thursday, friday]
+
+    def get_string_timetable_by_id(self, object_id):
+        [monday, tuesday, wednesday, thursday, friday] = self.get_object_timetable(object_id)
         string_to_return = 'Monday:\n'
         for lessons in monday:
             string_to_return += self.info.names[lessons[0]]
@@ -271,12 +275,63 @@ class TimeTable:
             string_to_return += '\n'
         return string_to_return
 
+    def rate_it(self) -> int:
+        def free_period_counter(day) -> int:
+            number_of_free_periods = 0
+            number_of_potential_free_periods = 0
+            is_begin = True
+            for lesson in day:
+                if lesson[0] == -1:
+                    if is_begin:
+                        pass
+                    else:
+                        number_of_potential_free_periods += 1
+                else:
+                    if is_begin:
+                        is_begin = False
+                    else:
+                        if number_of_potential_free_periods > 0:
+                            number_of_free_periods += number_of_potential_free_periods
+                            number_of_potential_free_periods = 0
+                        else:
+                            pass
+            return number_of_free_periods
+
+        rate = 1000000
+        first_iteration = True
+        for group_id in self.info.groups:
+            [monday, tuesday, wednesday, thursday, friday] = self.get_object_timetable(group_id)
+            week = [monday, tuesday, wednesday, thursday, friday]
+            if first_iteration:
+                rate -= len(monday) * 10000
+                first_iteration = False
+            for school_day in week:
+                rate -= free_period_counter(school_day) * 10000
+        for teacher_id in self.info.teachers:
+            [monday, tuesday, wednesday, thursday, friday] = self.get_object_timetable(teacher_id)
+            week = [monday, tuesday, wednesday, thursday, friday]
+            if first_iteration:
+                rate -= len(monday) * 10000
+                first_iteration = False
+            for school_day in week:
+                rate -= free_period_counter(school_day) * 1000
+
+        return rate
+
 
 if __name__ == '__main__':
     import json
 
     f = open('Data/info.json', 'r')
     info = TimeTableInfo(json.loads(f.read()))
-    time_table = TimeTable(info)
-    time_table.make_correct_timetable()
-    print(time_table.get_string_timetable_by_id(1005))
+    best_rate = 0
+    best = None
+    for _ in range(10):
+        time_table = TimeTable(info)
+        time_table.make_correct_timetable()
+        rate = time_table.rate_it()
+        if rate > best_rate:
+            best_rate = rate
+            best = time_table
+    print(best.rate_it())
+
